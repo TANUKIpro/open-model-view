@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drive 3D Viewer</title>
+<link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <select id="presetSelect" aria-label="Preset"></select>
+    <button id="settingsBtn" type="button" aria-label="Open settings">Settings</button>
+  </header>
+  <div id="viewer">
+    <div id="loadingOverlay" class="active" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="label" id="loadingLabel">Loading...</div>
+      <div class="progress indeterminate" id="loadingProgress"><div></div></div>
+      <div class="sub" id="loadingSub"></div>
+    </div>
+    <div id="status">Loading...</div>
+    <aside id="modelInfo" aria-label="Model information" hidden>
+      <div class="mi-header">
+        <span class="mi-title">Model Info</span>
+        <button id="modelInfoToggle" type="button" aria-label="Collapse panel">−</button>
+      </div>
+      <div class="mi-body">
+        <dl id="modelInfoList"></dl>
+      </div>
+    </aside>
+  </div>
+  <footer>
+    Loads OBJ/MTL/textures from a public Google Drive folder. Drag to rotate freely (unconstrained), scroll to zoom, right-drag to pan.
+  </footer>
+</div>
+
+<div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="panel">
+    <div class="panel-header">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="close-btn" id="settingsCloseBtn" type="button" aria-label="Close settings">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div class="row">
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="credit">
+        <img src="assets/koike.JPG" alt="koike" />
+        <div class="powered">Powered by koike</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
