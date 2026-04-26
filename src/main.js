@@ -21,6 +21,7 @@ import {
 import { createViewer } from './viewer.js';
 import { computeModelStats, renderModelInfo, hideModelInfo } from './model-info.js';
 import { initSettings } from './settings.js';
+import { ensureConsent, declinedMessage } from './consent.js';
 
 const viewer = createViewer($('viewer'));
 
@@ -40,8 +41,19 @@ for (const p of PRESETS) {
 }
 presetSelect.addEventListener('change', () => {
   if (!presetSelect.value) return;
-  loadFolder(presetSelect.value);
+  startLoad(presetSelect.value);
 });
+
+async function startLoad(url) {
+  const granted = await ensureConsent();
+  if (!granted) {
+    hideLoading();
+    setStatus(declinedMessage());
+    hideModelInfo();
+    return;
+  }
+  loadFolder(url);
+}
 
 async function downloadResources(files, objId, apiKey, totalCount) {
   const resourceMap = {};
@@ -140,5 +152,5 @@ async function loadFolder(folderInput) {
 const defaultPreset = PRESETS.find((p) => p.name === DEFAULT_PRESET_NAME) || PRESETS[0];
 if (defaultPreset) {
   presetSelect.value = defaultPreset.url;
-  loadFolder(defaultPreset.url);
+  startLoad(defaultPreset.url);
 }

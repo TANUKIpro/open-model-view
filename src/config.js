@@ -16,6 +16,7 @@ export const DEFAULT_PRESET_NAME = 'red_bull_can';
 
 export const STORAGE_KEYS = {
   theme: 'app_theme',
+  consent: 'app_consent',
 };
 
 export const SCENE_BG = { dark: 0x111111, light: 0xf0f0f3 };

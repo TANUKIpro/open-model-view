@@ -73,6 +73,17 @@ details > div { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
 #settingsModal .credit img { width: 120px; height: auto; display: block; border: 1px solid var(--panel-border); }
 #settingsModal .credit .powered { font-size: 13px; color: var(--muted); letter-spacing: 0.04em; }
 
+/* Consent modal */
+#consentModal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 200; }
+#consentModal.active { display: flex; }
+#consentModal .panel { background: var(--panel-bg); color: var(--fg); border: 1px solid var(--panel-border); border-radius: 12px; width: min(420px, 92vw); box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
+#consentModal .panel-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+#consentModal p { margin: 0; font-size: 14px; line-height: 1.6; }
+#consentModal .actions { display: flex; gap: 10px; justify-content: flex-end; }
+#consentModal button { padding: 8px 16px; background: transparent; color: var(--fg); border: 1px solid var(--panel-border); border-radius: 6px; font: inherit; cursor: pointer; }
+#consentModal button.primary { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
+#consentModal button:hover { filter: brightness(1.05); }
+
 /* Model info panel */
 #modelInfo { position: absolute; top: 12px; right: 12px; width: min(280px, calc(100% - 24px)); background: var(--status-bg); color: var(--fg); border: 1px solid var(--panel-border); border-radius: 8px; backdrop-filter: blur(4px); font-size: 12px; max-height: calc(100% - 24px); display: flex; flex-direction: column; box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 5; }
 #modelInfo[hidden] { display: none; }
