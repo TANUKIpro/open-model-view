@@ -1,41 +1,27 @@
 import { $ } from './ui.js';
 import { STORAGE_KEYS } from './config.js';
 
-const STRINGS = {
-  ja: {
-    body: '本サイトは外部ストレージから3Dモデルデータ（数十MB）を読み込みます。続行しますか？',
-    agree: '同意して読み込む',
-    decline: '同意しない',
-    declined: 'プレゼンテーションにて実際にご確認ください',
-  },
-  en: {
-    body: 'This site will load 3D model data (tens of MB) from external storage. Continue?',
-    agree: 'Agree and load',
-    decline: 'Decline',
-    declined: 'Please check it in person at the presentation.',
-  },
+const TEXT = {
+  body: 'Load 3D models from Google Drive. Network data may be used.',
+  agree: 'Load',
+  decline: 'Cancel',
+  declined: 'Loading canceled.',
 };
 
-function pickLocale() {
-  const lang = (navigator.language || 'en').toLowerCase();
-  return lang.startsWith('ja') ? 'ja' : 'en';
-}
-
 export function declinedMessage() {
-  return STRINGS[pickLocale()].declined;
+  return TEXT.declined;
 }
 
 export function ensureConsent() {
   if (localStorage.getItem(STORAGE_KEYS.consent) === 'granted') {
     return Promise.resolve(true);
   }
-  const t = STRINGS[pickLocale()];
   const modal = $('consentModal');
   const agreeBtn = $('consentAgree');
   const declineBtn = $('consentDecline');
-  $('consentBody').textContent = t.body;
-  agreeBtn.textContent = t.agree;
-  declineBtn.textContent = t.decline;
+  $('consentBody').textContent = TEXT.body;
+  agreeBtn.textContent = TEXT.agree;
+  declineBtn.textContent = TEXT.decline;
   modal.classList.add('active');
 
   return new Promise((resolve) => {
