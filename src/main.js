@@ -31,6 +31,7 @@ initSettings({
 
 const presetSelect = $('presetSelect');
 const presetsByName = [...PRESETS].sort((a, b) => a.name.localeCompare(b.name));
+const folderCache = new Map();
 
 const resolveApiKey = () => EMBEDDED_API_KEY;
 
@@ -56,35 +57,84 @@ async function startLoad(url) {
   loadFolder(url);
 }
 
-async function downloadResources(files, objId, apiKey, totalCount) {
-  const resourceMap = {};
-  let doneCount = 0;
-  for (const f of files) {
-    if (f.id === objId) continue;
-    const idx = doneCount + 1;
-    updateLoadingLabel(`Downloading: ${f.name}`, `(${idx}/${totalCount}) files`);
-    setStatus(`Downloading: ${f.name}`);
-    setLoadingProgress(0, 0);
-    const blob = await fetchAsBlob(driveDownloadUrl(f.id, apiKey), (r, t) => {
-      const mb = `${(r / 1024 / 1024).toFixed(1)}/${(t / 1024 / 1024).toFixed(1)} MB`;
-      updateLoadingLabel(`Downloading: ${f.name}`, `(${idx}/${totalCount}) ${mb}`);
-      setStatus(`Downloading: ${f.name} (${mb})`);
-      setLoadingProgress(r, t);
-    }, Number(f.size) || 0);
-    resourceMap[f.name] = blob;
-    doneCount++;
+function getFolderCache(folderId) {
+  let cache = folderCache.get(folderId);
+  if (!cache) {
+    cache = {
+      files: null,
+      blobs: new Map(),
+      texts: new Map(),
+      objectUrls: new Map(),
+    };
+    folderCache.set(folderId, cache);
   }
-  return { resourceMap, doneCount };
+  return cache;
 }
 
-async function buildMaterials(mtlFile, resourceMap) {
+function getObjectUrlForFile(file, blob, cache) {
+  let url = cache.objectUrls.get(file.id);
+  if (!url) {
+    url = blobUrlFor(blob);
+    cache.objectUrls.set(file.id, url);
+  }
+  return url;
+}
+
+async function fetchFileBlob(file, apiKey, cache, idx, totalCount) {
+  const cached = cache.blobs.get(file.id);
+  if (cached) return cached;
+
+  updateLoadingLabel(`Downloading: ${file.name}`, `(${idx}/${totalCount}) files`);
+  setStatus(`Downloading: ${file.name}`);
+  setLoadingProgress(0, 0);
+  const blob = await fetchAsBlob(driveDownloadUrl(file.id, apiKey), (r, t) => {
+    const mb = `${(r / 1024 / 1024).toFixed(1)}/${(t / 1024 / 1024).toFixed(1)} MB`;
+    updateLoadingLabel(`Downloading: ${file.name}`, `(${idx}/${totalCount}) ${mb}`);
+    setStatus(`Downloading: ${file.name} (${mb})`);
+    setLoadingProgress(r, t);
+  }, Number(file.size) || 0);
+  cache.blobs.set(file.id, blob);
+  return blob;
+}
+
+async function textForFile(file, blob, cache) {
+  let text = cache.texts.get(file.id);
+  if (text === undefined) {
+    text = await textFromBlob(blob);
+    cache.texts.set(file.id, text);
+  }
+  return text;
+}
+
+function hasFullBlobCache(cache) {
+  return Boolean(cache.files?.length) && cache.files.every((f) => cache.blobs.has(f.id));
+}
+
+async function prepareResources(files, objId, apiKey, totalCount, cache) {
+  const resourceMap = {};
+  const resourceFilesByName = new Map();
+  let processedCount = 0;
+  for (const f of files) {
+    if (f.id === objId) continue;
+    const idx = processedCount + 1;
+    const blob = await fetchFileBlob(f, apiKey, cache, idx, totalCount);
+    resourceMap[f.name] = blob;
+    resourceFilesByName.set(f.name, f);
+    processedCount++;
+  }
+  return { resourceMap, resourceFilesByName, processedCount };
+}
+
+async function buildMaterials(mtlFile, resourceMap, resourceFilesByName, cache) {
   if (!mtlFile) return { materials: null, mtlText: null };
-  const mtlText = await textFromBlob(resourceMap[mtlFile.name]);
+  const mtlText = await textForFile(mtlFile, resourceMap[mtlFile.name], cache);
   const rewritten = mtlText.replace(/^(\s*map_\w+\s+)(.+)$/gim, (_, prefix, ref) => {
     const base = ref.trim().split(/[\\/]/).pop();
     const blob = resourceMap[base];
     if (!blob) return `${prefix}${ref}`;
-    return `${prefix}${blobUrlFor(blob)}`;
+    const file = resourceFilesByName.get(base);
+    if (!file) return `${prefix}${blobUrlFor(blob)}`;
+    return `${prefix}${getObjectUrlForFile(file, blob, cache)}`;
   });
   const materials = new MTLLoader().parse(rewritten, '');
   materials.preload();
@@ -97,14 +147,27 @@ async function loadFolder(folderInput) {
   if (!folderInput) { setStatus('No folder specified', true); return; }
   const folderId = extractFolderId(folderInput);
   if (!folderId) { setStatus('Could not parse folder URL', true); return; }
+  const cache = getFolderCache(folderId);
+  const isFullyCached = hasFullBlobCache(cache);
+  const hasCachedFileList = Boolean(cache.files);
 
   presetSelect.disabled = true;
   hideModelInfo();
-  showLoading('Fetching folder contents...');
+  showLoading(
+    isFullyCached ? 'Loading cached model...' :
+      hasCachedFileList ? 'Resuming cached download...' : 'Fetching folder contents...'
+  );
 
   try {
-    setStatus('Fetching folder contents...');
-    const files = await listFolder(folderId, apiKey);
+    setStatus(
+      isFullyCached ? 'Loading from cache...' :
+        hasCachedFileList ? 'Resuming download...' : 'Fetching folder contents...'
+    );
+    let files = cache.files;
+    if (!files) {
+      files = await listFolder(folderId, apiKey);
+      cache.files = files;
+    }
     if (!files.length) throw new Error('Folder is empty or not publicly shared');
 
     const byExt = (ext) => files.find((f) => f.name.toLowerCase().endsWith(ext));
@@ -113,23 +176,15 @@ async function loadFolder(folderInput) {
     if (!obj) throw new Error('.obj file not found');
 
     const totalCount = files.length;
-    const { resourceMap, doneCount } = await downloadResources(files, obj.id, apiKey, totalCount);
+    const { resourceMap, resourceFilesByName, processedCount } = await prepareResources(files, obj.id, apiKey, totalCount, cache);
 
     updateLoadingLabel('Preparing materials...', '');
     setLoadingProgress(0, 0);
-    const { materials, mtlText } = await buildMaterials(mtl, resourceMap);
+    const { materials, mtlText } = await buildMaterials(mtl, resourceMap, resourceFilesByName, cache);
 
-    const objIdx = doneCount + 1;
-    updateLoadingLabel(`Downloading: ${obj.name}`, `(${objIdx}/${totalCount}) files`);
-    setStatus(`Downloading: ${obj.name}`);
-    setLoadingProgress(0, 0);
-    const objBlob = await fetchAsBlob(driveDownloadUrl(obj.id, apiKey), (r, t) => {
-      const mb = `${(r / 1024 / 1024).toFixed(1)}/${(t / 1024 / 1024).toFixed(1)} MB`;
-      updateLoadingLabel(`Downloading: ${obj.name}`, `(${objIdx}/${totalCount}) ${mb}`);
-      setStatus(`Downloading: ${obj.name} (${mb})`);
-      setLoadingProgress(r, t);
-    }, Number(obj.size) || 0);
-    const objText = await textFromBlob(objBlob);
+    const objIdx = processedCount + 1;
+    const objBlob = await fetchFileBlob(obj, apiKey, cache, objIdx, totalCount);
+    const objText = await textForFile(obj, objBlob, cache);
 
     updateLoadingLabel('Parsing model...', '');
     setLoadingProgress(0, 0);
