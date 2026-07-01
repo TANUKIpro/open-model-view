@@ -1,7 +1,7 @@
 // Public API key with HTTP referrer restrictions (Drive API read-only)
 export const EMBEDDED_API_KEY = 'AIzaSyDB3oGby8MuKMFjH5sJFj8nYMmlkXXJDJU';
 
-// Ordered ascending by total folder size (smallest = fastest to load).
+// Preset model folders. Display order is sorted by name in the UI.
 export const PRESETS = [
   { name: 'coffee_can',      url: 'https://drive.google.com/drive/folders/1eB5H0a6Apzywcf4EOH3yqImlYuB4xUQG' },
   { name: 'jagarico',        url: 'https://drive.google.com/drive/folders/15fyzOwFmXM-OFUbPodWX3yp4dicCBd-E' },

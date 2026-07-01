@@ -30,10 +30,11 @@ initSettings({
 });
 
 const presetSelect = $('presetSelect');
+const presetsByName = [...PRESETS].sort((a, b) => a.name.localeCompare(b.name));
 
 const resolveApiKey = () => EMBEDDED_API_KEY;
 
-for (const p of PRESETS) {
+for (const p of presetsByName) {
   const opt = document.createElement('option');
   opt.value = p.url;
   opt.textContent = p.name;
@@ -149,7 +150,7 @@ async function loadFolder(folderInput) {
   }
 }
 
-const defaultPreset = PRESETS.find((p) => p.name === DEFAULT_PRESET_NAME) || PRESETS[0];
+const defaultPreset = presetsByName.find((p) => p.name === DEFAULT_PRESET_NAME) || presetsByName[0];
 if (defaultPreset) {
   presetSelect.value = defaultPreset.url;
   startLoad(defaultPreset.url);

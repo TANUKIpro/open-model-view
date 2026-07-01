@@ -5,10 +5,14 @@ const modelInfoEl = $('modelInfo');
 const modelInfoListEl = $('modelInfoList');
 const modelInfoToggleEl = $('modelInfoToggle');
 
-modelInfoToggleEl.addEventListener('click', () => {
-  const collapsed = modelInfoEl.classList.toggle('collapsed');
+function setModelInfoCollapsed(collapsed) {
+  modelInfoEl.classList.toggle('collapsed', collapsed);
   modelInfoToggleEl.textContent = collapsed ? '+' : '\u2212';
   modelInfoToggleEl.setAttribute('aria-label', collapsed ? 'Expand panel' : 'Collapse panel');
+}
+
+modelInfoToggleEl.addEventListener('click', () => {
+  setModelInfoCollapsed(!modelInfoEl.classList.contains('collapsed'));
 });
 
 const formatBytes = (n) => {
@@ -104,6 +108,7 @@ export function renderModelInfo(stats) {
     modelInfoListEl.appendChild(dt);
     modelInfoListEl.appendChild(dd);
   }
+  setModelInfoCollapsed(true);
   modelInfoEl.hidden = false;
 }
 
